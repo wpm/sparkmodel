@@ -3,7 +3,6 @@ import logging
 import click as click
 import pandas as pandas
 from sklearn.externals import joblib
-from sklearn.metrics import accuracy_score
 
 from sparkmodel import predict_labels, __version__, generate_data
 from . import train_model
@@ -44,12 +43,11 @@ def predict(model_file, data_file, labeled_data):
     """
     model = joblib.load(model_file)
     data = pandas.read_csv(data_file)
-    labels = predict_labels(model, data)
+    labels, accuracy = predict_labels(model, data)
     if labeled_data:
-        data["predict"] = labels
-        data.to_csv(labeled_data, index=False)
-    if "label" in data:
-        click.echo(f"Accuracy {accuracy_score(data.label, labels):0.4f}")
+        data.to_csv(labels, index=False)
+    if accuracy is not None:
+        click.echo(f"Accuracy {accuracy:0.4f}")
 
 
 @click.command()

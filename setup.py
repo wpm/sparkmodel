@@ -1,8 +1,9 @@
 from setuptools import setup
+from sparkmodel import __version__
 
 setup(
-    name='main',
-    version='1.0.0',
+    name='Sparkmodel',
+    version=__version__,
     entry_points="""
     [console_scripts]
     sparkmodel=sparkmodel.main:main

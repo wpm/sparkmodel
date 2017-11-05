@@ -1,5 +1,10 @@
 import logging
+
+import pandas
+from sklearn.datasets import make_blobs
 from sklearn.svm import SVC
+
+__version__ = "1.0.0"
 
 
 def train_model(data):
@@ -28,3 +33,17 @@ def predict_labels(model, data):
     """
     logging.info(f"Predict {len(data)} labels.")
     return model.predict(data.drop("label", axis="columns"))
+
+
+def generate_data(n):
+    """
+    Generate random training data
+
+    :param n: number of data points to generate
+    :type n: int
+    :return: set of (x, y) coordinates and labels
+    :rtype: DataFrame
+    """
+    print("SSS")
+    x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
+    return pandas.DataFrame(data={"x": x[:, 0], "y": x[:, 1], "label": y})

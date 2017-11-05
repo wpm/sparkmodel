@@ -56,5 +56,6 @@ def generate_data(n):
     :return: set of (x, y) coordinates and labels
     :rtype: DataFrame
     """
+    logging.info(f"Generate {n} data points.")
     x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
     return pandas.DataFrame(data={"x": x[:, 0], "y": x[:, 1], "label": y})

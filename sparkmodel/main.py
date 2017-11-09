@@ -5,7 +5,7 @@ import pandas as pandas
 from sklearn.externals import joblib
 
 from sparkmodel import __version__
-from model import train_model, predict_labels, generate_data
+from .model import train_model, predict_labels, generate_data
 
 
 @click.group()

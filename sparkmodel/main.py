@@ -4,8 +4,8 @@ import click as click
 import pandas as pandas
 from sklearn.externals import joblib
 
-from sparkmodel import predict_labels, __version__, generate_data
-from . import train_model
+from sparkmodel import __version__
+from model import train_model, predict_labels, generate_data
 
 
 @click.group()

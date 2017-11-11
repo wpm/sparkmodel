@@ -8,6 +8,7 @@ setup(
     [console_scripts]
     sparkmodel=sparkmodel.main:main
     """,
+    python_requires=">=3.6",
     author='W.P. McNeill',
     author_email='billmcn@gmail.com',
     description='Minimal application to train models on Spark',

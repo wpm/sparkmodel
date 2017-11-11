@@ -47,7 +47,7 @@ def predict(model_file, data_file, labeled_data):
     labels = predict_labels(model, features(data))
     if labeled_data:
         data["predict"] = labels
-        data.to_csv(labels, index=False)
+        data.to_csv(labeled_data, index=False)
     if "label" in data:
         click.echo(f"Accuracy {accuracy_score(data.label, labels):0.4f}")
 

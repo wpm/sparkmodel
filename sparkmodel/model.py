@@ -2,45 +2,38 @@ import logging
 
 import pandas
 from sklearn.datasets import make_blobs
-from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 
-def train_model(data):
+def train_model(features, labels):
     """
     Train a model
 
-    :param data: labeled training data
-    :type data: DataFrame
-    :return: a model trained on the data
+    :param features: sample features
+    :type features: [[int]]
+    :param labels: labels for the features
+    :type labels: [int]
+    :return: trained model
     :rtype: SVC
     """
-    logging.info(f"Train with {len(data)} instances.")
-    return SVC().fit(data.drop("label", axis="columns"), data.label)
+    logging.info(f"Train with {len(features)} instances.")
+    assert len(features) == len(labels)
+    return SVC().fit(features, labels)
 
 
-def predict_labels(model, data):
+def predict_labels(model, features):
     """
     Predict labels for data using a trained model
 
-    This returns the data with a 'predict' column containing the predicted labels. If the data contains a 'label'
-    column this is used to calculate accuracy.
-
     :param model: model to use
     :type model: SVC
-    :param data: data to predict labels for
-    :type data: DataFrame
-    :return: data with associated labels and accuracy score
-    :rtype: (array, float or None)
+    :param features: sample features
+    :type features: [[int]]
+    :return: predicted labels
+    :rtype: [int]
     """
-    logging.info(f"Predict {len(data)} labels.")
-    labels = model.predict(data.drop("label", axis="columns"))
-    data["predict"] = labels
-    if "label" in data:
-        accuracy = accuracy_score(data.label, labels)
-    else:
-        accuracy = None
-    return data, accuracy
+    logging.info(f"Predict {len(features)} labels.")
+    return model.predict(features)
 
 
 def generate_data(n):

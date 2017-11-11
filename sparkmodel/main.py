@@ -3,6 +3,7 @@ import logging
 import click as click
 import pandas as pandas
 from sklearn.externals import joblib
+from sklearn.metrics import accuracy_score
 
 from sparkmodel import __version__
 from .model import train_model, predict_labels, generate_data
@@ -26,7 +27,7 @@ def train(model_file, data_file):
     The data is a csv file that contains a 'label' column. All other columns are treated as features.
     """
     data = pandas.read_csv(data_file)
-    model = train_model(data)
+    model = train_model(features(data), data.label)
     joblib.dump(model, model_file)
     logging.info(f"Created model in {model_file.name}")
 
@@ -43,11 +44,12 @@ def predict(model_file, data_file, labeled_data):
     """
     model = joblib.load(model_file)
     data = pandas.read_csv(data_file)
-    labels, accuracy = predict_labels(model, data)
+    labels = predict_labels(model, features(data))
     if labeled_data:
+        data["predict"] = labels
         data.to_csv(labels, index=False)
-    if accuracy is not None:
-        click.echo(f"Accuracy {accuracy:0.4f}")
+    if "label" in data:
+        click.echo(f"Accuracy {accuracy_score(data.label, labels):0.4f}")
 
 
 @click.command(short_help="Generate data")
@@ -63,3 +65,7 @@ def generate(n, output_file):
 main.add_command(train)
 main.add_command(predict)
 main.add_command(generate)
+
+
+def features(data):
+    return data.drop("label", axis="columns")

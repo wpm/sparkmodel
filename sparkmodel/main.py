@@ -1,12 +1,13 @@
 import logging
 
 import click as click
-import pandas as pandas
-from sklearn.externals import joblib
-from sklearn.metrics import accuracy_score
+from pyspark.ml.classification import LinearSVC, LinearSVCModel
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.linalg import Vectors
+from pyspark.sql import SparkSession
+from sklearn.datasets import make_blobs
 
 from sparkmodel import __version__
-from .model import train_model, predict_labels, generate_data
 
 
 @click.group()
@@ -15,51 +16,55 @@ from .model import train_model, predict_labels, generate_data
               help="Logging level")
 def main(log):
     """Machine learning command line framework"""
-    logging.basicConfig(format="%(asctime)s:%(levelname)s:%(message)s", level=getattr(logging, log.upper()))
+    log_level = log.upper()
+    logging.basicConfig(format="%(asctime)s:%(levelname)s Sparkmodel:%(message)s", level=getattr(logging, log_level))
+    global spark
+    spark = SparkSession.builder.appName("Sparkmodel").getOrCreate()
 
 
 @click.command(short_help="Train a model")
-@click.argument("model_file", type=click.File("wb"), metavar="MODEL")
-@click.argument("data_file", type=click.File(), metavar="DATA")
-def train(model_file, data_file):
+@click.argument("model_path", metavar="MODEL")
+@click.argument("data_path", metavar="DATA")
+def train(model_path, data_path):
     """Train an SVM model on DATA and save it as MODEL.
-
-    The data is a csv file that contains a 'label' column. All other columns are treated as features.
     """
-    data = pandas.read_csv(data_file)
-    model = train_model(features(data), data.label)
-    joblib.dump(model, model_file)
-    logging.info(f"Created model in {model_file.name}")
+    data = spark.read.load(data_path)
+    model = LinearSVC().fit(data)
+    model.save(model_path)
+    logging.info(f"Created model in {model_path}")
 
 
 @click.command(short_help="Predict labels")
-@click.argument("model_file", type=click.File("rb"), metavar="MODEL")
-@click.argument("data_file", type=click.File(), metavar="DATA")
-@click.option("--labeled-data", type=click.File("w"))
-def predict(model_file, data_file, labeled_data):
+@click.argument("model_path", metavar="MODEL")
+@click.argument("data_path", metavar="DATA")
+@click.option("--labeled-data")
+def predict(model_path, data_path, labeled_data):
     """Use MODEL to make label predictions for DATA.
 
     Optionally output data with a 'predict' column containing label predictions.
     If a 'label' column in present in the data, calculate and print the accuracy.
     """
-    model = joblib.load(model_file)
-    data = pandas.read_csv(data_file)
-    labels = predict_labels(model, features(data))
+    model = LinearSVCModel.load(model_path)
+    data = spark.read.load(data_path)
+    data = model.transform(data)
     if labeled_data:
-        data["predict"] = labels
-        data.to_csv(labeled_data, index=False)
-    if "label" in data:
-        click.echo(f"Accuracy {accuracy_score(data.label, labels):0.4f}")
+        data.drop("features").write(labeled_data)
+    if "label" in data.columns:
+        accuracy = MulticlassClassificationEvaluator(metricName="accuracy").evaluate(data)
+        click.echo(f"Accuracy {accuracy:0.4f}")
 
 
 @click.command(short_help="Generate data")
+@click.argument("output_path", metavar="OUTPUT")
 @click.option("--n", default=1000, help="number of data points to generate")
-@click.option("--output-file", type=click.File("w"), default="-")
-def generate(n, output_file):
+def generate(n, output_path):
     """
-    Generate (x,y) data in Gaussian distributions around the points (-1, -1) and (1,1).
+    Generate (x,y) data in Gaussian distributions around the points (-1, -1) and (1,1) and write it to OUTPUT.
     """
-    click.echo(generate_data(n).to_csv(output_file, index=False))
+    x, y = generate_data(n)
+    samples = [(int(label), Vectors.dense(features)) for label, features in zip(y, x)]
+    data = spark.createDataFrame(samples, schema=["label", "features"])
+    data.write.save(output_path)
 
 
 main.add_command(train)
@@ -67,5 +72,17 @@ main.add_command(predict)
 main.add_command(generate)
 
 
-def features(data):
-    return data.drop("label", axis="columns")
+def generate_data(n):
+    """
+    Generate random training data
+
+    Generate (x,y) data in Gaussian distributions around the points (-1, -1) and (1,1).
+
+    :param n: number of data points to generate
+    :type n: int
+    :return: set of (x, y) coordinates and labels
+    :rtype: DataFrame
+    """
+    logging.info(f"Generate {n} data points.")
+    x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
+    return x, y

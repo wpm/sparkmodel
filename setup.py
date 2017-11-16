@@ -12,5 +12,5 @@ setup(
     author="W.P. McNeill",
     author_email="billmcn@gmail.com",
     description="Minimal application to train models on Spark",
-    install_requires=["click", "pyspark"]
+    install_requires=["click", "pyspark", "sklearn"]
 )

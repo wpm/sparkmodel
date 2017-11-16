@@ -48,7 +48,7 @@ def predict(model_path, data_path, labeled_data):
     data = spark.read.load(data_path)
     data = model.transform(data)
     if labeled_data:
-        data.drop("features").write(labeled_data)
+        data.drop("features").write.save(labeled_data)
     if "label" in data.columns:
         accuracy = MulticlassClassificationEvaluator(metricName="accuracy").evaluate(data)
         click.echo(f"Accuracy {accuracy:0.4f}")

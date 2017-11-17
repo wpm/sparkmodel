@@ -10,6 +10,10 @@ from sklearn.datasets import make_blobs
 from sparkmodel import __version__
 
 
+def spark():
+    return SparkSession.builder.appName("Sparkmodel").getOrCreate()
+
+
 @click.group()
 @click.version_option(version=__version__)
 @click.option("--log", type=click.Choice(["debug", "info", "warning", "error", "critical"]), default="warning",
@@ -18,8 +22,6 @@ def main(log):
     """Machine learning command line framework"""
     log_level = log.upper()
     logging.basicConfig(format="%(asctime)s:%(levelname)s Sparkmodel:%(message)s", level=getattr(logging, log_level))
-    global spark
-    spark = SparkSession.builder.appName("Sparkmodel").getOrCreate()
 
 
 @click.command(short_help="Train a model")
@@ -28,7 +30,7 @@ def main(log):
 def train(model_path, data_path):
     """Train an SVM model on DATA and save it as MODEL.
     """
-    data = spark.read.load(data_path)
+    data = spark().read.load(data_path)
     model = LinearSVC().fit(data)
     model.save(model_path)
     logging.info(f"Created model in {model_path}")
@@ -45,7 +47,7 @@ def predict(model_path, data_path, labeled_data):
     If a 'label' column in present in the data, calculate and print the accuracy.
     """
     model = LinearSVCModel.load(model_path)
-    data = spark.read.load(data_path)
+    data = spark().read.load(data_path)
     data = model.transform(data)
     if labeled_data:
         data.drop("features").write.save(labeled_data)
@@ -63,7 +65,7 @@ def generate(n, output_path):
     """
     x, y = generate_data(n)
     samples = [(int(label), Vectors.dense(features)) for label, features in zip(y, x)]
-    data = spark.createDataFrame(samples, schema=["label", "features"])
+    data = spark().createDataFrame(samples, schema=["label", "features"])
     data.write.save(output_path)
 
 

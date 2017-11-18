@@ -39,15 +39,15 @@ def train(model_path, data_path):
 @click.command(short_help="Predict labels")
 @click.argument("model_path", metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
-@click.option("--labeled-data")
+@click.option("--labeled-data", metavar="OUTPUT", help="file to which to write labeled data")
 def predict(model_path, data_path, labeled_data):
     """Use MODEL to make label predictions for DATA.
 
     Optionally output data with a 'predict' column containing label predictions.
     If a 'label' column in present in the data, calculate and print the accuracy.
     """
-    model = LinearSVCModel.load(model_path)
     data = spark().read.load(data_path)
+    model = LinearSVCModel.load(model_path)
     data = model.transform(data)
     if labeled_data:
         data.drop("features").write.save(labeled_data)

@@ -8,6 +8,7 @@ setup(
     [console_scripts]
     sparkmodel=sparkmodel.main:main
     """,
+    scripts=["bin/sparkmodel_submit.py"],
     python_requires=">=3.6",
     author="W.P. McNeill",
     author_email="billmcn@gmail.com",

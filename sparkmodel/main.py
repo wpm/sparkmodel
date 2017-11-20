@@ -1,7 +1,8 @@
 import logging
 
 import click as click
-from pyspark.ml.classification import LinearSVC, LinearSVCModel
+from pyspark.ml import Pipeline, PipelineModel
+from pyspark.ml.classification import LinearSVC
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
@@ -31,7 +32,7 @@ def train(model_path, data_path):
     """Train an SVM model on DATA and save it as MODEL.
     """
     data = spark().read.load(data_path)
-    model = LinearSVC().fit(data)
+    model = Pipeline(stages=[LinearSVC()]).fit(data)
     model.save(model_path)
     logging.info(f"Created model in {model_path}")
 
@@ -47,7 +48,7 @@ def predict(model_path, data_path, labeled_data):
     If a 'label' column in present in the data, calculate and print the accuracy.
     """
     data = spark().read.load(data_path)
-    model = LinearSVCModel.load(model_path)
+    model = PipelineModel.load(model_path)
     data = model.transform(data)
     if labeled_data:
         data.drop("features").write.save(labeled_data)

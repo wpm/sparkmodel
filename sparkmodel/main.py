@@ -1,7 +1,6 @@
 import logging
 
 import click as click
-from numpy import array
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.classification import LinearSVC, LogisticRegression
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator

@@ -54,9 +54,10 @@ def train_pipeline(model_path: str, data_path: str, estimator):
                    "can be any real number, where Inf will make all predictions 0.0 and -Inf will make all "
                    "predictions 1.0.")
 @click.option("--tol", default=1e-6, help="the convergence tolerance for iterative algorithms (>= 0).")
-def svm(model_path: str, data_path: str,
-        aggregation_depth: int, fit_intercept: bool, max_iter: int, reg_param: float, standardization: bool,
-        threshold: float, tol: float):
+def train_svm_command(model_path: str, data_path: str,
+                      aggregation_depth: int, fit_intercept: bool, max_iter: int, reg_param: float,
+                      standardization: bool,
+                      threshold: float, tol: float):
     """Train a support vector machine on DATA and save it as MODEL.
     """
     svm_estimator = LinearSVC(aggregationDepth=aggregation_depth, fitIntercept=fit_intercept, maxIter=max_iter,
@@ -64,7 +65,7 @@ def svm(model_path: str, data_path: str,
     return train_pipeline(model_path, data_path, svm_estimator)
 
 
-train.add_command(svm)
+train.add_command(train_svm_command, name="svm")
 
 
 @click.command(short_help="logistic regression")
@@ -85,9 +86,10 @@ train.add_command(svm)
 @click.option("--family", type=click.Choice(["auto", "binomial", "multinomial"]), default="auto",
               help="The name of family which is a description of the label distribution to be used in the model. "
                    "Supported options: auto, binomial, multinomial")
-def logistic_regression(model_path: str, data_path: str,
-                        max_iter: int, reg_param: float, elastic_net_param: float, tol: float, threshold: float,
-                        standardization: bool, aggregation_depth: int, family: str):
+def train_logistic_regression_command(model_path: str, data_path: str,
+                                      max_iter: int, reg_param: float, elastic_net_param: float, tol: float,
+                                      threshold: float,
+                                      standardization: bool, aggregation_depth: int, family: str):
     """Train a logistic regression predictor on DATA and save it as MODEL.
     """
     logistic_regression_estimator = LogisticRegression(maxIter=max_iter, regParam=reg_param,
@@ -98,14 +100,14 @@ def logistic_regression(model_path: str, data_path: str,
     return train_pipeline(model_path, data_path, logistic_regression_estimator)
 
 
-train.add_command(logistic_regression, name="logistic-regression")
+train.add_command(train_logistic_regression_command, name="logistic-regression")
 
 
 @click.command(short_help="Predict labels")
 @click.argument("model_path", metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
 @click.option("--labeled-data", metavar="OUTPUT", help="file to which to write labeled data")
-def predict(model_path: str, data_path: str, labeled_data: str):
+def predict_command(model_path: str, data_path: str, labeled_data: str):
     """Use MODEL to make label predictions for DATA.
 
     Optionally output data with a 'predict' column containing label predictions.
@@ -124,30 +126,21 @@ def predict(model_path: str, data_path: str, labeled_data: str):
 @click.command(short_help="Generate data")
 @click.argument("output_path", metavar="OUTPUT")
 @click.option("--n", default=1000, help="number of data points to generate")
-def generate(n: int, output_path: str):
+def generate_command(n: int, output_path: str):
     """
     Generate (x,y) data in Gaussian distributions around the points (-1, -1) and (1,1) and write it to OUTPUT.
     """
-    x, y = generate_data(n)
+    generate(n, output_path)
+
+
+def generate(n: int, output_path: str):
+    logging.info(f"Generate {n} data points.")
+    x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
     samples = [(int(label), Vectors.dense(features)) for label, features in zip(y, x)]
     data = spark().createDataFrame(samples, schema=["label", "features"])
     data.write.save(output_path)
 
 
-def generate_data(n: int) -> (array, array):
-    """
-    Generate random training data
-
-    Generate (x,y) data in Gaussian distributions around the points (-1, -1) and (1,1).
-
-    :param n: number of data points to generate
-    :return: set of (x, y) coordinates and labels
-    """
-    logging.info(f"Generate {n} data points.")
-    x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
-    return x, y
-
-
 main.add_command(train)
-main.add_command(predict)
-main.add_command(generate)
+main.add_command(predict_command, name="predict")
+main.add_command(generate_command, name="generate")

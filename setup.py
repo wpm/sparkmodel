@@ -4,6 +4,7 @@ from sparkmodel import __version__
 setup(
     name="Sparkmodel",
     version=__version__,
+    license="MIT",
     entry_points="""
     [console_scripts]
     sparkmodel=sparkmodel.main:main

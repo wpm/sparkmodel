@@ -44,6 +44,16 @@ class TestCommandLine(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
         self.assertTrue(os.path.isdir(data))
 
+    def test_output_path(self):
+        output = self.temporary_filename("output")
+        result = self.runner.invoke(main, ["generate", output])
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        self.assertTrue(os.path.isdir(output))
+        result = self.runner.invoke(main, ["generate", output])
+        self.assertEqual(2, result.exit_code, msg=result.output)
+        self.assertRegexpMatches(result.output, ".+/output already exists")
+        print(result.output)
+
     def train_command(self, command):
         model = self.temporary_filename(f"model.{command}")
         output = self.temporary_filename(f"output.{command}")

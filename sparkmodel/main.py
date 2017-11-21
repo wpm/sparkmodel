@@ -1,4 +1,5 @@
 import logging
+import os
 
 import click as click
 from pyspark.ml import Pipeline, PipelineModel
@@ -13,6 +14,16 @@ from sparkmodel import __version__
 
 def spark():
     return SparkSession.builder.appName("Sparkmodel").getOrCreate()
+
+
+# noinspection PyClassHasNoInit
+class OutputPathType(click.ParamType):
+    name = "output-path"
+
+    def convert(self, value, param, ctx):
+        if os.path.exists(value):
+            self.fail(f"output path {value} already exists")
+        return value
 
 
 @click.group()
@@ -40,7 +51,7 @@ def train_pipeline(model_path: str, data_path: str, estimator):
 
 
 @click.command(short_help="support vector machine")
-@click.argument("model_path", metavar="MODEL")
+@click.argument("model_path", type=OutputPathType(), metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
 @click.option("--aggregation-depth", default=2, help="suggested depth for treeAggregate (>= 2).")
 @click.option("--fit-intercept", default=True, help="whether to fit an intercept term.")
@@ -68,7 +79,7 @@ train.add_command(train_svm_command, name="svm")
 
 
 @click.command(short_help="logistic regression")
-@click.argument("model_path", metavar="MODEL")
+@click.argument("model_path", type=OutputPathType(), metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
 @click.option("--max-iter", default=100, help="max number of iterations (>= 0).")
 @click.option("--reg-param", default=0.0, help="regularization parameter (>= 0).")
@@ -105,7 +116,7 @@ train.add_command(train_logistic_regression_command, name="logistic-regression")
 @click.command(short_help="Predict labels")
 @click.argument("model_path", metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
-@click.option("--labeled-data", metavar="OUTPUT", help="file to which to write labeled data")
+@click.option("--labeled-data", type=OutputPathType(), metavar="OUTPUT", help="destination path for labeled data")
 def predict_command(model_path: str, data_path: str, labeled_data: str):
     """Use MODEL to make label predictions for DATA.
 
@@ -123,7 +134,7 @@ def predict_command(model_path: str, data_path: str, labeled_data: str):
 
 
 @click.command(short_help="Generate data")
-@click.argument("output_path", metavar="OUTPUT")
+@click.argument("output_path", type=OutputPathType(), metavar="OUTPUT")
 @click.option("--n", default=1000, help="number of data points to generate")
 def generate_command(n: int, output_path: str):
     """

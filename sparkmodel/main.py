@@ -26,16 +26,40 @@ def main(log: str):
     logging.basicConfig(format="%(asctime)s:%(levelname)s Sparkmodel:%(message)s", level=getattr(logging, log_level))
 
 
-@click.command(short_help="Train a model")
+@click.group(short_help="Train a model", invoke_without_command=True)
+def train():
+    """Train a predictor on DATA and save it as MODEL.
+    """
+    pass
+
+
+@click.command(short_help="support vector machine")
 @click.argument("model_path", metavar="MODEL")
 @click.argument("data_path", metavar="DATA")
-def train(model_path: str, data_path: str):
-    """Train an SVM model on DATA and save it as MODEL.
+@click.option("--aggregation-depth", default=2, help="suggested depth for treeAggregate (>= 2).")
+@click.option("--fit-intercept", default=True, help="whether to fit an intercept term.")
+@click.option("--max-iter", default=100, help="max number of iterations (>= 0).")
+@click.option("--reg-param", default=0.0, help="regularization parameter (>= 0).")
+@click.option("--standardization", default=True,
+              help="whether to standardize the training features before fitting the model.")
+@click.option("--threshold", default=0.0,
+              help="The threshold in binary classification applied to the linear model prediction.  This threshold "
+                   "can be any real number, where Inf will make all predictions 0.0 and -Inf will make all "
+                   "predictions 1.0.")
+@click.option("--tol", default=1e-6, help="the convergence tolerance for iterative algorithms (>= 0).")
+def svm(model_path: str, data_path: str, aggregation_depth: int, fit_intercept: bool, max_iter: int, reg_param: float,
+        standardization: bool, threshold: float, tol: float):
+    """Train a support vector machine on DATA and save it as MODEL.
     """
     data = spark().read.load(data_path)
-    model = Pipeline(stages=[LinearSVC()]).fit(data)
-    model.save(model_path)
-    logging.info(f"Created model in {model_path}")
+    pipeline = Pipeline(stages=[
+        LinearSVC(aggregationDepth=aggregation_depth, fitIntercept=fit_intercept, maxIter=max_iter, regParam=reg_param,
+                  standardization=standardization, threshold=threshold, tol=tol)]).fit(data)
+    pipeline.save(model_path)
+    logging.info(f"""Created model in {model_path}""")
+
+
+train.add_command(svm)
 
 
 @click.command(short_help="Predict labels")
@@ -49,8 +73,8 @@ def predict(model_path: str, data_path: str, labeled_data: str):
     If a 'label' column in present in the data, calculate and print the accuracy.
     """
     data = spark().read.load(data_path)
-    model = PipelineModel.load(model_path)
-    data = model.transform(data)
+    pipeline = PipelineModel.load(model_path)
+    data = pipeline.transform(data)
     if labeled_data:
         data.drop("features").write.save(labeled_data)
     if "label" in data.columns:

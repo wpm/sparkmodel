@@ -52,7 +52,6 @@ class TestCommandLine(unittest.TestCase):
         result = self.runner.invoke(main, ["generate", output])
         self.assertEqual(2, result.exit_code, msg=result.output)
         self.assertRegexpMatches(result.output, ".+/output already exists")
-        print(result.output)
 
     def train_command(self, command):
         model = self.temporary_filename(f"model.{command}")

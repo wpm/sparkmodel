@@ -7,7 +7,7 @@ setup(
     license="MIT",
     entry_points="""
     [console_scripts]
-    sparkmodel=sparkmodel.main:main
+    sparkmodel=sparkmodel.console:main
     """,
     scripts=["bin/sparkmodel_submit.py"],
     python_requires=">=3.6",

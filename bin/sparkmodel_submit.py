@@ -1,3 +1,7 @@
+"""
+Script to pass to the spark-submit command.
+"""
+
 import sys
 
 from pkg_resources import load_entry_point

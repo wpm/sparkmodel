@@ -5,7 +5,8 @@ import unittest
 from click.testing import CliRunner
 from pyspark.ml.classification import LogisticRegression
 
-from main import train_and_save_pipeline, generate_and_save_data_set, spark
+from train import train_and_save_pipeline
+from sparkmodel import generate_and_save_data_set, spark
 from sparkmodel.console import main
 
 

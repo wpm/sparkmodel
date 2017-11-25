@@ -3,6 +3,9 @@ Command line interface for Sparkmodel.
 """
 
 import logging
+import os
+from importlib import import_module
+from typing import List, Tuple, Callable
 
 import click as click
 from pyspark.ml import PipelineModel
@@ -10,8 +13,8 @@ from pyspark.ml.classification import LinearSVC, LogisticRegression
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql.utils import AnalysisException
 
-from sparkmodel import __version__
-from .main import train_and_save_pipeline, generate_and_save_data_set, spark
+from sparkmodel import __version__, generate_and_save_data_set, spark
+from .train import train_and_save_pipeline
 
 
 class SparkPathType(click.ParamType):
@@ -20,17 +23,17 @@ class SparkPathType(click.ParamType):
     def __init__(self, should_exist=True):
         self.should_exist = should_exist
 
-    def convert(self, value, param, ctx):
-        exists = self.spark_path_exists(value)
+    def convert(self, path: str, _, __) -> str:
+        exists = self.spark_path_exists(path)
         if self.should_exist and not exists:
-            self.fail(f"output path {value} does not exist")
+            self.fail(f"output path {path} does not exist")
         elif not self.should_exist and exists:
-            self.fail(f"output path {value} already exists")
+            self.fail(f"output path {path} already exists")
         else:
-            return value
+            return path
 
     @staticmethod
-    def spark_path_exists(path):
+    def spark_path_exists(path: str) -> bool:
         try:
             spark().read.load(path)
         except AnalysisException as e:
@@ -48,21 +51,36 @@ class SparkInputPath(SparkPathType):
         super().__init__(should_exist=True)
 
 
+# noinspection PyClassHasNoInit
+class CustomModel(click.ParamType):
+    name = "custom-model"
+
+    def convert(self, file_path: str, _, __) -> List[Tuple[str, Callable]]:
+        if not os.path.isfile(file_path):
+            self.fail(f"{file_path} is not a file.")
+        module_path = ".".join(os.path.split(file_path[:-3]))
+        try:
+            return import_module(module_path).train_commands
+        except ModuleNotFoundError:
+            self.fail("Could not load custom model definitions from {file_path}.")
+        except AttributeError:
+            self.fail(f"{file_path} is missing a train_commands definition.")
+
+
 @click.group()
 @click.version_option(version=__version__)
 @click.option("--log", type=click.Choice(["debug", "info", "warning", "error", "critical"]), default="warning",
               help="Logging level")
-def main(log: str):
+@click.option("--custom-model", type=CustomModel(), help="Python file containing custom models")
+@click.pass_context
+def main(ctx, log: str, custom_model: List[Tuple[str, Callable]]):
     """Machine learning command line framework"""
     log_level = log.upper()
     logging.basicConfig(format="%(asctime)s:%(levelname)s Sparkmodel:%(message)s", level=getattr(logging, log_level))
-
-
-@click.group(short_help="Train a model", invoke_without_command=True)
-def train():
-    """Train a predictor on DATA and save it as MODEL.
-    """
-    pass
+    if custom_model is not None:
+        ctx.obj = custom_model
+    else:
+        ctx.obj = []
 
 
 @click.command(short_help="support vector machine")
@@ -82,7 +100,7 @@ def train():
 def train_svm_command(model_path: str, data_path: str, **params: dict):
     """Train a support vector machine on DATA and save it as MODEL.
     """
-    return train_and_save_pipeline(model_path, data_path, LinearSVC, params)
+    train_and_save_pipeline(model_path, data_path, LinearSVC, params)
 
 
 @click.command(short_help="logistic regression")
@@ -106,7 +124,20 @@ def train_svm_command(model_path: str, data_path: str, **params: dict):
 def train_logistic_regression_command(model_path: str, data_path: str, **params: dict):
     """Train a logistic regression predictor on DATA and save it as MODEL.
     """
-    return train_and_save_pipeline(model_path, data_path, LogisticRegression, params)
+    train_and_save_pipeline(model_path, data_path, LogisticRegression, params)
+
+
+class Train(click.MultiCommand):
+    COMMANDS = [("svm", train_svm_command), ("logistic-regression", train_logistic_regression_command)]
+
+    def __init__(self, **attrs):
+        super().__init__("train", **attrs)
+
+    def list_commands(self, ctx):
+        return [name for (name, _) in ctx.obj + self.COMMANDS]
+
+    def get_command(self, ctx, name):
+        return next(c for (n, c) in ctx.obj + self.COMMANDS if n == name)
 
 
 @click.command(short_help="Predict labels")
@@ -139,9 +170,6 @@ def generate_command(n: int, output_path: str):
     generate_and_save_data_set(n, output_path)
 
 
-train.add_command(train_svm_command, name="svm")
-train.add_command(train_logistic_regression_command, name="logistic-regression")
-
-main.add_command(train)
+main.add_command(Train(help="Train a model"))
 main.add_command(predict_command, name="predict")
 main.add_command(generate_command, name="generate")

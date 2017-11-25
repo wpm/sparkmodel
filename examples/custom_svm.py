@@ -1,8 +1,8 @@
 import click as click
 from pyspark.ml.classification import LinearSVC
 
-from console import SparkOutputPath, SparkInputPath
-from main import train_and_save_pipeline
+from sparkmodel.console import SparkOutputPath, SparkInputPath
+from sparkmodel.train import train_and_save_pipeline
 
 
 @click.command(short_help="custom support vector machine")
@@ -12,12 +12,10 @@ from main import train_and_save_pipeline
 def main(model_path: str, data_path: str, max_iter: int):
     """Train a support vector machine on DATA and save it as MODEL.
     """
-    return train_and_save_pipeline(model_path, data_path, LinearSVC, {"maxIter": max_iter})
+    train_and_save_pipeline(model_path, data_path, LinearSVC, {"maxIter": max_iter})
 
 
-def train_commands():
-    return [(main, "custom-svm")]
-
+train_commands = [("custom-svm", main)]
 
 if __name__ == "__main__":
     main()

@@ -2,9 +2,8 @@ import logging
 import re
 
 from pyspark.ml import Pipeline
-from pyspark.ml.linalg import Vectors
-from pyspark.sql import SparkSession
-from sklearn.datasets import make_blobs
+
+from sparkmodel import spark
 
 
 def train_and_save_pipeline(model_path: str, data_path: str, estimator_class: type, params: dict = ()):
@@ -33,15 +32,3 @@ def train_and_save_pipeline(model_path: str, data_path: str, estimator_class: ty
     pipeline = Pipeline(stages=[estimator]).fit(data)
     pipeline.save(model_path)
     logging.info(f"""Created pipeline model in {model_path}""")
-
-
-def generate_and_save_data_set(n: int, output_path: str):
-    x, y = make_blobs(n, centers=[(-1, -1), (1, 1)])
-    samples = [(int(label), Vectors.dense(features)) for label, features in zip(y, x)]
-    data = spark().createDataFrame(samples, schema=["label", "features"])
-    data.write.save(output_path)
-    logging.info(f"Generated data set with {n} samples in {output_path}.")
-
-
-def spark():
-    return SparkSession.builder.appName("Sparkmodel").getOrCreate()
